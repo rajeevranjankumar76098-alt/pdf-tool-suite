@@ -162,3 +162,4 @@ lsof -ti:8000 | xargs kill
 ```bash
 sudo apt install libgl1-mesa-glx
 ```
+"# pdf-tool-suite" 
