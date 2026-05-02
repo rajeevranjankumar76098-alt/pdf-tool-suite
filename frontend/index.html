@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Tool Suite — Offline</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a22;
+      --surface2: #22222e;
+      --border: rgba(255,255,255,0.08);
+      --text: #e8e6f0;
+      --muted: #888899;
+      --accent: #7c6ee0;
+      --accent2: #5df0c8;
+      --danger: #f06060;
+      --success: #5df0a8;
+      --warn: #f0c05d;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .app { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      padding: 0 8px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .offline-badge {
+      margin: 0 8px 16px;
+      background: rgba(93,240,168,0.1);
+      border: 1px solid rgba(93,240,168,0.3);
+      color: var(--success);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active {
+      background: rgba(124,110,224,0.15);
+      border-color: rgba(124,110,224,0.3);
+      color: var(--accent);
+    }
+    .nav-icon { font-size: 18px; min-width: 24px; text-align: center; }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      padding: 40px;
+      max-width: 760px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .page-desc {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(124,110,224,0.05);
+    }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-text { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+    .upload-hint { font-size: 13px; color: var(--muted); }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    .file-icon { font-size: 24px; }
+    .file-name { font-size: 14px; font-weight: 500; }
+    .file-size { font-size: 12px; color: var(--muted); }
+    .file-remove {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      opacity: 0.7;
+    }
+    .file-remove:hover { opacity: 1; }
+
+    /* Form controls */
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+
+    input[type="text"], input[type="number"], input[type="password"], select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      margin-bottom: 16px;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .range-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+
+    .toggle-group { display: flex; gap: 8px; margin-bottom: 16px; }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .toggle-btn.selected {
+      background: rgba(124,110,224,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+    .checkbox-row span { font-size: 14px; }
+
+    /* Row grid */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* Color picker row */
+    .color-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .color-preview { width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--border); cursor: pointer; }
+
+    /* Button */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #9b5ee0);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-download {
+      background: rgba(93,240,168,0.15);
+      color: var(--success);
+      border: 1px solid rgba(93,240,168,0.3);
+    }
+    .btn-download:hover { background: rgba(93,240,168,0.22); }
+
+    /* Status messages */
+    .status {
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-top: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .status.loading { background: rgba(124,110,224,0.1); border: 1px solid rgba(124,110,224,0.2); color: var(--accent); }
+    .status.success { background: rgba(93,240,168,0.1); border: 1px solid rgba(93,240,168,0.2); color: var(--success); }
+    .status.error { background: rgba(240,96,96,0.1); border: 1px solid rgba(240,96,96,0.2); color: var(--danger); }
+
+    .status-icon { font-size: 18px; margin-top: 1px; }
+
+    .result-detail { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+    /* Stats row */
+    .stats-row { display: flex; gap: 12px; margin-top: 12px; }
+    .stat-box {
+      flex: 1;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(124,110,224,0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useCallback } = React;
+const API = "http://localhost:8000/api";
+
+// ── Shared Upload Component ───────────────────────────────────────────────────
+function UploadZone({ file, onFile, onRemove }) {
+  const [drag, setDrag] = useState(false);
+  const inputRef = useRef();
+
+  const handleDrop = (e) => {
+    e.preventDefault(); setDrag(false);
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === "application/pdf") onFile(f);
+  };
+
+  return (
+    <div className="card">
+      <div className="card-title">PDF File Select karein</div>
+      {!file ? (
+        <div
+          className={`upload-zone ${drag ? "drag-over" : ""}`}
+          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current.click()}
+        >
+          <div className="upload-icon">📄</div>
+          <div className="upload-text">PDF yahan drop karein ya click karein</div>
+          <div className="upload-hint">Sirf .pdf files support hoti hain</div>
+          <input ref={inputRef} type="file" accept=".pdf" style={{ display: "none" }}
+            onChange={(e) => { const f = e.target.files[0]; if (f) onFile(f); }} />
+        </div>
+      ) : (
+        <div className="file-info">
+          <span className="file-icon">📋</span>
+          <div>
+            <div className="file-name">{file.name}</div>
+            <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
+          </div>
+          <button className="file-remove" onClick={onRemove} title="Remove">✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Status Display ────────────────────────────────────────────────────────────
+function Status({ status }) {
+  if (!status) return null;
+  const icons = { loading: <span className="spinner" />, success: "✅", error: "❌" };
+  return (
+    <div className={`status ${status.type}`}>
+      <span className="status-icon">{icons[status.type]}</span>
+      <div>
+        <div>{status.message}</div>
+        {status.detail && <div className="result-detail">{status.detail}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Upload helper ─────────────────────────────────────────────────────────────
+async function uploadFile(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API}/upload`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
+function DownloadButton({ fileId, label = "Download karein" }) {
+  return (
+    <a href={`${API}/download/${fileId}`} download={`pdf_${fileId.slice(0,8)}.pdf`}>
+      <button className="btn btn-download" style={{ marginTop: 12 }}>⬇️ {label}</button>
+    </a>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TOOLS
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── 1. Edit Tool ──────────────────────────────────────────────────────────────
+function EditTool() {
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [result, setResult] = useState(null);
+  const [form, setForm] = useState({
+    text: "", page_number: 0, x: 50, y: 100,
+    font_size: 16, font_color: "#ff0000", font_name: "helv",
+    bold: false, italic: false,
+  });
+
+  const run = async () => {
+    if (!file || !form.text) return;
+    setStatus({ type: "loading", message: "Text add ho raha hai..." });
+    try {
+      const up = await uploadFile(file);
+      const res = await fetch(`${API}/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: up.file_id, ...form,
+          page_number: parseInt(form.page_number),
+          x: parseFloat(form.x), y: parseFloat(form.y),
+          font_size: parseFloat(form.font_size),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      setResult(data);
+      setStatus({ type: "success", message: data.message });
+    } catch (e) {
+      setStatus({ type: "error", message: "Error: " + e.message });
+    }
+  };
+
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  return (
+    <div>
+      <div className="page-title">✏️ PDF Edit</div>
+      <div className="page-desc">PDF ke kisi bhi page pe text likhein — position, size, color sab set karein</div>
+
+      <UploadZone file={file} onFile={setFile} onRemove={() => { setFile(null); setResult(null); setStatus(null); }} />
+
+      <div className="card">
+        <div className="card-title">Text Settings</div>
+        <label>Jo text likhna hai</label>
+        <input type="text" placeholder="Yahan apna text likhein..." value={form.text} onChange={e => f("text", e.target.value)} />
+
+        <div className="form-row">
+          <div>
+            <label>Page number (0 = pehla page)</label>
+            <input type="number" min="0" value={form.page_number} onChange={e => f("page_number", e.target.value)} />
+          </div>
+          <div>
+            <label>Font size</label>
+            <input type="number" min="6" max="200" value={form.font_size} onChange={e => f("font_size", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div>
+            <label>X position (left se)</label>
+            <input type="number" value={form.x} onChange={e => f("x", e.target.value)} />
+          </div>
+          <div>
+            <label>Y position (top se)</label>
+            <input type="number" value={form.y} onChange={e => f("y", e.target.value)} />
+          </div>
+        </div>
+
+        <label>Font color</label>
+        <div className="color-row">
+          <div className="color-preview" style={{ background: form.font_color }}></div>
+          <input type="text" value={form.font_color} onChange={e => f("font_color", e.target.value)} style={{ marginBottom: 0, flex: 1 }} placeholder="#ff0000" />
+        </div>
+
+        <label>Font style</label>
+        <div className="toggle-group">
+          {["helv", "times", "cour"].map(fn => (
+            <button key={fn} className={`toggle-btn ${form.font_name === fn ? "selected" : ""}`}
+              onClick={() => f("font_name", fn)}>{fn === "helv" ? "Sans" : fn === "times" ? "Serif" : "Mono"}</button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 24 }}>
+          <label className="checkbox-row">
+            <input type="checkbox" checked={form.bold} onChange={e => f("bold", e.target.checked)} />
+            <span><b>Bold</b></span>
+          </label>
+          <label className="checkbox-row">
+            <input type="checkbox" checked={form.italic} onChange={e => f("italic", e.target.checked)} />
+            <span><i>Italic</i></span>
+          </label>
+        </div>
+
+        <button className="btn btn-primary" onClick={run} disabled={!file || !form.text}>
+          ✏️ Text Add karein
+        </button>
+        <Status status={status} />
+        {result && <DownloadButton fileId={result.file_id} label="Edited PDF Download" />}
+      </div>
+    </div>
+  );
+}
+
+// ── 2. Compress Tool ──────────────────────────────────────────────────────────
+function CompressTool() {
+  const [file, setFile] = useState(null);
+  const [quality, setQuality] = useState("medium");
+  const [status, setStatus] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const run = async () => {
+    if (!file) return;
+    setStatus({ type: "loading", message: "PDF compress ho raha hai..." });
+    try {
+      const up = await uploadFile(file);
+      const res = await fetch(`${API}/compress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: up.file_id, quality }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      setResult(data);
+      setStatus({ type: "success", message: data.message });
+    } catch (e) {
+      setStatus({ type: "error", message: "Error: " + e.message });
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-title">🗜️ PDF Compress</div>
+      <div className="page-desc">PDF ka size kam karein bina zyada quality lose kiye</div>
+
+      <UploadZone file={file} onFile={setFile} onRemove={() => { setFile(null); setResult(null); setStatus(null); }} />
+
+      <div className="card">
+        <div className="card-title">Compression Quality</div>
+        <div className="toggle-group">
+          {[["low", "🔥 Maximum (small size)"], ["medium", "⚡ Balanced"], ["high", "💎 High Quality"]].map(([k, v]) => (
+            <button key={k} className={`toggle-btn ${quality === k ? "selected" : ""}`} onClick={() => setQuality(k)}>{v}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
+          {quality === "low" && "Sabse zyada compression — images blur ho sakti hain"}
+          {quality === "medium" && "Achha balance — recommended for most documents"}
+          {quality === "high" && "Mild compression — near-original quality maintain hogi"}
+        </div>
+
+        <button className="btn btn-primary" onClick={run} disabled={!file}>🗜️ Compress karein</button>
+        <Status status={status} />
+        {result && (
+          <>
+            <div className="stats-row">
+              <div className="stat-box">
+                <div className="stat-value">{result.original_size_kb} KB</div>
+                <div className="stat-label">Original Size</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-value">{result.compressed_size_kb} KB</div>
+                <div className="stat-label">Compressed Size</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-value" style={{ color: "var(--success)" }}>-{result.reduction_percent}%</div>
+                <div className="stat-label">Size Reduction</div>
+              </div>
+            </div>
+            <DownloadButton fileId={result.file_id} label="Compressed PDF Download" />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 3. Clean Tool ─────────────────────────────────────────────────────────────
+function CleanTool() {
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [result, setResult] = useState(null);
+  const [opts, setOpts] = useState({
+    dpi: 200, ink_threshold: 150, min_area: 30,
+    inpaint_radius: 7, preserve_printed_text: true,
+  });
+  const f = (k, v) => setOpts(p => ({ ...p, [k]: v }));
+
+  const run = async () => {
+    if (!file) return;
+    setStatus({ type: "loading", message: "Handwriting detect karke remove ho rahi hai... (thoda time lagega)" });
+    try {
+      const up = await uploadFile(file);
+      const res = await fetch(`${API}/clean`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: up.file_id, ...opts,
+          dpi: parseInt(opts.dpi), ink_threshold: parseInt(opts.ink_threshold),
+          min_area: parseInt(opts.min_area), inpaint_radius: parseInt(opts.inpaint_radius),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      setResult(data);
+      setStatus({ type: "success", message: data.message });
+    } catch (e) {
+      setStatus({ type: "error", message: "Error: " + e.message });
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-title">🧹 Pen Marks Remove</div>
+      <div className="page-desc">Scanned PDF se handwriting, pen strokes, aur ink marks hatayein</div>
+
+      <UploadZone file={file} onFile={setFile} onRemove={() => { setFile(null); setResult(null); setStatus(null); }} />
+
+      <div className="card">
+        <div className="card-title">Cleaning Options</div>
+
+        <label>Ink Sensitivity (Threshold: {opts.ink_threshold})</label>
+        <input type="range" min="50" max="220" value={opts.ink_threshold} onChange={e => f("ink_threshold", e.target.value)} />
+        <div className="range-labels"><span>Sensitive (50)</span><span>Moderate (150)</span><span>Lenient (220)</span></div>
+
+        <label>Min Mark Size ({opts.min_area} px)</label>
+        <input type="range" min="5" max="200" value={opts.min_area} onChange={e => f("min_area", e.target.value)} />
+        <div className="range-labels"><span>Small (5)</span><span>Medium (30)</span><span>Large (200)</span></div>
+
+        <label>Render Quality (DPI: {opts.dpi})</label>
+        <div className="toggle-group">
+          {[["150", "Fast"], ["200", "Balanced"], ["300", "High Quality"]].map(([v, l]) => (
+            <button key={v} className={`toggle-btn ${opts.dpi == v ? "selected" : ""}`}
+              onClick={() => f("dpi", v)}>{l} ({v})</button>
+          ))}
+        </div>
+
+        <label className="checkbox-row" style={{ marginBottom: 20 }}>
+          <input type="checkbox" checked={opts.preserve_printed_text}
+            onChange={e => f("preserve_printed_text", e.target.checked)} />
+          <span>Printed text preserve karein (recommended)</span>
+        </label>
+
+        <button className="btn btn-primary" onClick={run} disabled={!file}>🧹 Clean karein</button>
+        <Status status={status} />
+        {result && <DownloadButton fileId={result.file_id} label="Clean PDF Download" />}
+      </div>
+    </div>
+  );
+}
+
+// ── 4. Invert Tool ────────────────────────────────────────────────────────────
+function InvertTool() {
+  const [file, setFile] = useState(null);
+  const [mode, setMode] = useState("full");
+  const [dpi, setDpi] = useState(150);
+  const [status, setStatus] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const run = async () => {
+    if (!file) return;
+    setStatus({ type: "loading", message: "Colors invert ho rahi hain..." });
+    try {
+      const up = await uploadFile(file);
+      const res = await fetch(`${API}/invert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: up.file_id, mode, dpi }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      setResult(data);
+      setStatus({ type: "success", message: data.message });
+    } catch (e) {
+      setStatus({ type: "error", message: "Error: " + e.message });
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-title">🌙 Color Invert</div>
+      <div className="page-desc">PDF ko dark mode ya light mode mein convert karein</div>
+
+      <UploadZone file={file} onFile={setFile} onRemove={() => { setFile(null); setResult(null); setStatus(null); }} />
+
+      <div className="card">
+        <div className="card-title">Inversion Mode</div>
+        <div className="toggle-group">
+          <button className={`toggle-btn ${mode === "full" ? "selected" : ""}`} onClick={() => setMode("full")}>
+            🔄 Full Invert (all colors)
+          </button>
+          <button className={`toggle-btn ${mode === "smart" ? "selected" : ""}`} onClick={() => setMode("smart")}>
+            🧠 Smart Invert (luminance only)
+          </button>
+        </div>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
+          {mode === "full" ? "Har pixel ka exact complement — true dark mode look" : "Sirf brightness invert hogi — colors zyada natural rahenge"}
+        </div>
+
+        <label>Render Quality (DPI: {dpi})</label>
+        <div className="toggle-group" style={{ marginBottom: 20 }}>
+          {[["150", "Fast"], ["200", "Balanced"], ["300", "Crisp"]].map(([v, l]) => (
+            <button key={v} className={`toggle-btn ${dpi == v ? "selected" : ""}`}
+              onClick={() => setDpi(parseInt(v))}>{l} ({v})</button>
+          ))}
+        </div>
+
+        <button className="btn btn-primary" onClick={run} disabled={!file}>🌙 Invert karein</button>
+        <Status status={status} />
+        {result && <DownloadButton fileId={result.file_id} label="Inverted PDF Download" />}
+      </div>
+    </div>
+  );
+}
+
+// ── 5. Lock Tool ──────────────────────────────────────────────────────────────
+function LockTool() {
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [result, setResult] = useState(null);
+  const [form, setForm] = useState({
+    user_password: "", owner_password: "",
+    allow_printing: true, allow_copying: false,
+  });
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const run = async () => {
+    if (!file || !form.user_password) return;
+    setStatus({ type: "loading", message: "PDF lock ho raha hai..." });
+    try {
+      const up = await uploadFile(file);
+      const res = await fetch(`${API}/lock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: up.file_id, ...form }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      setResult(data);
+      setStatus({ type: "success", message: data.message,
+        detail: "Yeh password yaad rakhein — iske bina PDF nahi khulega!" });
+    } catch (e) {
+      setStatus({ type: "error", message: "Error: " + e.message });
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-title">🔒 PDF Lock</div>
+      <div className="page-desc">PDF ko password se protect karein</div>
+
+      <UploadZone file={file} onFile={setFile} onRemove={() => { setFile(null); setResult(null); setStatus(null); }} />
+
+      <div className="card">
+        <div className="card-title">Password Settings</div>
+
+        <label>User Password (kholne ke liye) *</label>
+        <input type="password" placeholder="Password daalein (min 4 chars)" value={form.user_password}
+          onChange={e => f("user_password", e.target.value)} />
+
+        <label>Owner Password (optional — full permissions ke liye)</label>
+        <input type="password" placeholder="Khali rakhein to user password use hoga"
+          value={form.owner_password} onChange={e => f("owner_password", e.target.value)} />
+
+        <label className="checkbox-row">
+          <input type="checkbox" checked={form.allow_printing} onChange={e => f("allow_printing", e.target.checked)} />
+          <span>Printing allow karein</span>
+        </label>
+        <label className="checkbox-row" style={{ marginBottom: 20 }}>
+          <input type="checkbox" checked={form.allow_copying} onChange={e => f("allow_copying", e.target.checked)} />
+          <span>Text copying allow karein</span>
+        </label>
+
+        <button className="btn btn-primary" onClick={run} disabled={!file || !form.user_password}>🔒 Lock karein</button>
+        <Status status={status} />
+        {result && <DownloadButton fileId={result.file_id} label="Locked PDF Download" />}
+      </div>
+    </div>
+  );
+}
+
+// ── 6. Unlock Tool ────────────────────────────────────────────────────────────
+function UnlockTool() {
+  const [file, setFile] = useState(null);
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const run = async () => {
+    if (!file || !password) return;
+    setStatus({ type: "loading", message: "PDF unlock ho raha hai..." });
+    try {
+      const up = await uploadFile(file);
+      const res = await fetch(`${API}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_id: up.file_id, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      setResult(data);
+      setStatus({ type: "success", message: data.message });
+    } catch (e) {
+      setStatus({ type: "error", message: "Error: " + e.message });
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-title">🔓 PDF Unlock</div>
+      <div className="page-desc">Password-protected PDF ko decrypt karein</div>
+
+      <UploadZone file={file} onFile={setFile} onRemove={() => { setFile(null); setResult(null); setStatus(null); }} />
+
+      <div className="card">
+        <div className="card-title">Password</div>
+        <label>PDF ka current password</label>
+        <input type="password" placeholder="Password daalein..." value={password}
+          onChange={e => setPassword(e.target.value)} />
+
+        <button className="btn btn-primary" onClick={run} disabled={!file || !password}>🔓 Unlock karein</button>
+        <Status status={status} />
+        {result && <DownloadButton fileId={result.file_id} label="Unlocked PDF Download" />}
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+const TOOLS = [
+  { id: "edit",     icon: "✏️", label: "PDF Edit",      component: EditTool },
+  { id: "compress", icon: "🗜️", label: "Compress",      component: CompressTool },
+  { id: "clean",    icon: "🧹", label: "Pen Marks Remove", component: CleanTool },
+  { id: "invert",   icon: "🌙", label: "Color Invert",  component: InvertTool },
+  { id: "lock",     icon: "🔒", label: "PDF Lock",      component: LockTool },
+  { id: "unlock",   icon: "🔓", label: "PDF Unlock",    component: UnlockTool },
+];
+
+function App() {
+  const [active, setActive] = useState("edit");
+  const ActiveTool = TOOLS.find(t => t.id === active).component;
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="logo">
+          <div className="logo-icon">📑</div>
+          PDF Tool Suite
+        </div>
+        <div className="offline-badge">🟢 100% Offline — No Internet</div>
+        {TOOLS.map(t => (
+          <div key={t.id} className={`nav-item ${active === t.id ? "active" : ""}`}
+            onClick={() => setActive(t.id)}>
+            <span className="nav-icon">{t.icon}</span>
+            {t.label}
+          </div>
+        ))}
+      </div>
+      <div className="main">
+        <ActiveTool />
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
